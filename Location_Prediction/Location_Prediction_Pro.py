@@ -157,9 +157,8 @@ def main():
 
         # 设置标题并使用 Times New Roman
         ax.set_title(
-            f"Probability Heatmap (t={t}), Center=({center_x},{center_y})\n"
-            f"MaxProb={max_val:.6f} at ({center_x},{center_y})",
-            fontname="Times New Roman",    # <-- 这里！
+            f"t={t*15} min MaxProb={max_val:.6f} at ({center_x},{center_y})",
+            fontname="Microsoft YaHei",    # <-- 这里！
             fontsize=14                    # 可根据需要调大小
         )
 
@@ -173,7 +172,7 @@ def main():
         )
         # 创建 Colorbar，并设置 label 字体为 Times New Roman
         cbar = fig.colorbar(img, ax=ax)
-        cbar.set_label("Probability", fontname="Times New Roman", fontsize=12)
+        cbar.set_label("", fontname="Times New Roman", fontsize=12)
 
         # 覆盖陆地为灰色
         height, width = data.shape
@@ -200,15 +199,15 @@ def main():
 
         # 设置坐标轴
         ax.set_xticks(np.arange(0, width))
-        ax.set_xticklabels([str(xx) for xx in range(min_x, max_x + 1)], rotation=90)
+        ax.set_xticklabels([str(xx) for xx in range(min_x, max_x + 1)])
         ax.set_yticks(np.arange(0, height))
         ax.set_yticklabels([str(yy) for yy in range(max_y, min_y - 1, -1)])
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
+        ax.set_xlabel("")
+        ax.set_ylabel("")
 
         plt.tight_layout()
         plt.show(block=False)
-        plt.pause(0.8)
+        plt.pause(0.5)
 
         # 计算下一时刻
         if t < time_steps - 1:

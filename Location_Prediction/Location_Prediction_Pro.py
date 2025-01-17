@@ -102,7 +102,7 @@ def calculate_next_probabilities(current_probs, grid_map):
     return next_probs
 
 
-def build_data_array(probabilities, grid_map, start_x, start_y, range_val=5):
+def build_data_array(probabilities, grid_map, start_x, start_y, range_val=25):
     """
     构造 2D Numpy 数组 data (height x width)，
     其中 data[row, col] = 对应坐标的概率值，如果是陆地则为 0。
@@ -137,11 +137,11 @@ def main():
     grid_map = load_data(csv_path)
 
     # 自动演示多少个时刻
-    time_steps = 5
+    time_steps = 100  # 可自由调整迭代次数
 
     # 初始位置
     start_x, start_y = 43, 4
-    range_val = 5
+    range_val = 25
 
     # 初始化 t=0 的概率分布
     current_probs = init_probabilities(grid_map, start_x, start_y)
@@ -153,16 +153,20 @@ def main():
     # 构建初始 data 数组和 land_mask
     data, land_mask = build_data_array(current_probs, grid_map, start_x, start_y, range_val=range_val)
 
-    # 显示初始热力图
-    img = ax.imshow(data, cmap='Blues', interpolation='nearest')
+    # 拿到初始最大值
+    max_val = np.max(data)
+    if max_val <= 0:
+        max_val = 1e-6
+
+    # 使用线性映射，并设置 vmin=0, vmax=max_val
+    img = ax.imshow(data, cmap='Blues', interpolation='nearest', vmin=0, vmax=max_val)
     cbar = plt.colorbar(img, ax=ax, label='Probability')
 
-    # 叠加陆地的灰色方块(只做一次，保持不变)
+    # 叠加陆地的灰色方块(只做一次)
     height, width = data.shape
     for row_idx in range(height):
         for col_idx in range(width):
             if land_mask[row_idx, col_idx]:
-                # 用灰色方块覆盖陆地
                 ax.add_patch(
                     plt.Rectangle((col_idx - 0.5, row_idx - 0.5), 1, 1,
                                   fill=True, color='gray', alpha=1)
@@ -173,42 +177,42 @@ def main():
     max_x = start_x + range_val
     min_y = start_y - range_val
     max_y = start_y + range_val
-
-    # X 方向
     ax.set_xticks(np.arange(0, width))
     ax.set_xticklabels([str(x) for x in range(min_x, max_x + 1)], rotation=90)
-    # Y 方向
     ax.set_yticks(np.arange(0, height))
     ax.set_yticklabels([str(y) for y in range(max_y, min_y - 1, -1)])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
 
     plt.tight_layout()
-    # 在同一窗口里动态刷新
     plt.show(block=False)
 
-    # -- 循环迭代，每次 0.5s 更新一次同一个图像 --
     for t in range(time_steps):
         ax.set_title(f"Probability Heatmap (t={t})")
         print(f"=== t={t} ===")
         print_probability_distribution(current_probs, start_x, start_y, range_val)
 
-        # 若不是第一次( t>0 )，需要更新 data
         if t > 0:
-            # 已经在上一循环里更新了 current_probs，这里只需把新的数据放进图里
+            # 构建新 data
             data, _ = build_data_array(current_probs, grid_map, start_x, start_y, range_val)
-            img.set_data(data)  # 更新热力图数据
+
+            # 动态更新 vmax
+            new_max = np.max(data)
+            if new_max <= 0:
+                new_max = 1e-6
+            img.set_clim(vmin=0, vmax=new_max)
+
+            # 更新图像数据
+            img.set_data(data)
 
         plt.draw()
-        plt.pause(0.5)  # 暂停 0.5s
+        plt.pause(0.5)
 
         # 计算下一时刻
         if t < time_steps - 1:
             next_probs = calculate_next_probabilities(current_probs, grid_map)
             current_probs = next_probs
 
-    # 最后可以让图保持打开，等待手动关闭
-    # 或者程序到此结束后，如果你执行脚本就会退出。
     input("Press Enter to exit...")
 
 

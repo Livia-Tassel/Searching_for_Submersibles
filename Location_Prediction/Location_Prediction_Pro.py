@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 def load_data(csv_path):
     """
     读取 CSV 文件，并将每个点的信息存储到字典 grid_map 中：
@@ -32,18 +31,16 @@ def load_data(csv_path):
         }
     return grid_map
 
-
 def is_land(cell_info):
     """
     如果四个方向概率均为 None，则视为陆地。
     """
     return (
-            cell_info['P_up'] is None and
-            cell_info['P_down'] is None and
-            cell_info['P_left'] is None and
-            cell_info['P_right'] is None
+        cell_info['P_up'] is None and
+        cell_info['P_down'] is None and
+        cell_info['P_left'] is None and
+        cell_info['P_right'] is None
     )
-
 
 def init_probabilities(grid_map, start_x, start_y):
     """
@@ -60,7 +57,6 @@ def init_probabilities(grid_map, start_x, start_y):
             probabilities[(x, y)] = 0.0
     return probabilities
 
-
 def get_neighbor_contribution(nx, ny, direction_key, current_probs, grid_map):
     """
     计算某个邻居点 (nx, ny) 向当前点移动的概率贡献。
@@ -74,7 +70,6 @@ def get_neighbor_contribution(nx, ny, direction_key, current_probs, grid_map):
     neighbor_prob = current_probs.get((nx, ny), 0.0)
     return neighbor_prob * dir_val
 
-
 def calculate_next_probabilities(current_probs, grid_map):
     """
     基于 current_probs 计算下一时刻的概率分布。
@@ -87,31 +82,28 @@ def calculate_next_probabilities(current_probs, grid_map):
             continue
 
         total = 0.0
-        # 上方 (x, y+1) 向下 -> (x, y)
-        total += get_neighbor_contribution(x, y + 1, 'P_down', current_probs, grid_map)
-        # 下方 (x, y-1) 向上 -> (x, y)
-        total += get_neighbor_contribution(x, y - 1, 'P_up', current_probs, grid_map)
-        # 左方 (x-1, y) 向右 -> (x, y)
-        total += get_neighbor_contribution(x - 1, y, 'P_right', current_probs, grid_map)
-        # 右方 (x+1, y) 向左 -> (x, y)
-        total += get_neighbor_contribution(x + 1, y, 'P_left', current_probs, grid_map)
+        # 上方 (x, y+1) -> (x, y)
+        total += get_neighbor_contribution(x, y+1, 'P_down', current_probs, grid_map)
+        # 下方 (x, y-1) -> (x, y)
+        total += get_neighbor_contribution(x, y-1, 'P_up', current_probs, grid_map)
+        # 左方 (x-1, y) -> (x, y)
+        total += get_neighbor_contribution(x-1, y, 'P_right', current_probs, grid_map)
+        # 右方 (x+1, y) -> (x, y)
+        total += get_neighbor_contribution(x+1, y, 'P_left', current_probs, grid_map)
 
-        # 简单处理一下浮点精度
         total = float(f"{total:.8f}")
         next_probs[(x, y)] = total
     return next_probs
 
-
-def build_data_array(probabilities, grid_map, start_x, start_y, range_val=25):
+def build_data_array(probabilities, grid_map, center_x, center_y, range_val=5):
     """
-    构造 2D Numpy 数组 data (height x width)，
-    其中 data[row, col] = 对应坐标的概率值，如果是陆地则为 0。
-    同时返回一个 land_mask 记录哪些格是陆地 (True)。
+    以 (center_x, center_y) 为中心，构造 2D Numpy 数组 data (height x width)，
+    同时返回 land_mask 用于标识陆地，及 (min_x, max_x, min_y, max_y)。
     """
-    min_x = start_x - range_val
-    max_x = start_x + range_val
-    min_y = start_y - range_val
-    max_y = start_y + range_val
+    min_x = center_x - range_val
+    max_x = center_x + range_val
+    min_y = center_y - range_val
+    max_y = center_y + range_val
 
     width = max_x - min_x + 1
     height = max_y - min_y + 1
@@ -119,7 +111,6 @@ def build_data_array(probabilities, grid_map, start_x, start_y, range_val=25):
     data = np.zeros((height, width), dtype=float)
     land_mask = np.zeros((height, width), dtype=bool)
 
-    # 行 0 对应 max_y，行 height-1 对应 min_y
     for row_idx, y in enumerate(range(max_y, min_y - 1, -1)):
         for col_idx, x in enumerate(range(min_x, max_x + 1)):
             cell_info = grid_map.get((x, y))
@@ -129,84 +120,95 @@ def build_data_array(probabilities, grid_map, start_x, start_y, range_val=25):
             else:
                 data[row_idx, col_idx] = prob
 
-    return data, land_mask
-
+    return data, land_mask, (min_x, max_x, min_y, max_y)
 
 def main():
     csv_path = "Grid_with_Integer_Coordinates.csv"
     grid_map = load_data(csv_path)
 
-    # 自动演示多少个时刻
-    time_steps = 100  # 可自由调整迭代次数
-
-    # 初始位置
+    # 迭代次数
+    time_steps = 100
     start_x, start_y = 43, 4
-    range_val = 25
-
-    # 初始化 t=0 的概率分布
     current_probs = init_probabilities(grid_map, start_x, start_y)
 
-    # -- 首次绘图设置 (只创建一次 Figure 和 Axes) --
-    plt.ion()  # 打开交互模式
-    fig, ax = plt.subplots(figsize=(6, 6))
-
-    # 构建初始 data 数组和 land_mask
-    data, land_mask = build_data_array(current_probs, grid_map, start_x, start_y, range_val=range_val)
-
-    # 拿到初始最大值
-    max_val = np.max(data)
-    if max_val <= 0:
-        max_val = 1e-6
-
-    # 使用线性映射，并设置 vmin=0, vmax=max_val
-    img = ax.imshow(data, cmap='Blues', interpolation='nearest', vmin=0, vmax=max_val)
-    cbar = plt.colorbar(img, ax=ax, label='Probability')
-
-    # 叠加陆地的灰色方块(只做一次)
-    height, width = data.shape
-    for row_idx in range(height):
-        for col_idx in range(width):
-            if land_mask[row_idx, col_idx]:
-                ax.add_patch(
-                    plt.Rectangle((col_idx - 0.5, row_idx - 0.5), 1, 1,
-                                  fill=True, color='gray', alpha=1)
-                )
-
-    # 设置坐标轴(只做一次)
-    min_x = start_x - range_val
-    max_x = start_x + range_val
-    min_y = start_y - range_val
-    max_y = start_y + range_val
-    ax.set_xticks(np.arange(0, width))
-    ax.set_xticklabels([str(x) for x in range(min_x, max_x + 1)], rotation=90)
-    ax.set_yticks(np.arange(0, height))
-    ax.set_yticklabels([str(y) for y in range(max_y, min_y - 1, -1)])
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-
-    plt.tight_layout()
-    plt.show(block=False)
+    plt.ion()
+    fig = plt.figure(figsize=(7, 7))
 
     for t in range(time_steps):
-        ax.set_title(f"Probability Heatmap (t={t})")
-        print(f"=== t={t} ===")
-        print_probability_distribution(current_probs, start_x, start_y, range_val)
+        # 找到概率最大的坐标
+        max_cell, max_val = max(current_probs.items(), key=lambda x: x[1])
+        center_x, center_y = max_cell
 
-        if t > 0:
-            # 构建新 data
-            data, _ = build_data_array(current_probs, grid_map, start_x, start_y, range_val)
+        # 构建当前显示区域
+        data, land_mask, (min_x, max_x, min_y, max_y) = build_data_array(
+            current_probs, grid_map, center_x, center_y, range_val=5
+        )
 
-            # 动态更新 vmax
-            new_max = np.max(data)
-            if new_max <= 0:
-                new_max = 1e-6
-            img.set_clim(vmin=0, vmax=new_max)
+        # 动态设置 vmax
+        cur_max = np.max(data)
+        if cur_max <= 0:
+            cur_max = 1e-6
 
-            # 更新图像数据
-            img.set_data(data)
+        # 彻底清空 figure
+        fig.clf()
 
-        plt.draw()
-        plt.pause(0.5)
+        # 重新创建 Axes
+        ax = fig.add_subplot(111)
+
+        # 设置标题并使用 Times New Roman
+        ax.set_title(
+            f"Probability Heatmap (t={t}), Center=({center_x},{center_y})\n"
+            f"MaxProb={max_val:.6f} at ({center_x},{center_y})",
+            fontname="Times New Roman",    # <-- 这里！
+            fontsize=14                    # 可根据需要调大小
+        )
+
+        # 绘制热力图
+        img = ax.imshow(
+            data,
+            cmap='Blues',
+            interpolation='nearest',
+            vmin=0,
+            vmax=cur_max
+        )
+        # 创建 Colorbar，并设置 label 字体为 Times New Roman
+        cbar = fig.colorbar(img, ax=ax)
+        cbar.set_label("Probability", fontname="Times New Roman", fontsize=12)
+
+        # 覆盖陆地为灰色
+        height, width = data.shape
+        for row_idx in range(height):
+            for col_idx in range(width):
+                if land_mask[row_idx, col_idx]:
+                    ax.add_patch(
+                        plt.Rectangle((col_idx - 0.5, row_idx - 0.5), 1, 1,
+                                      fill=True, color='gray', alpha=1)
+                    )
+
+        # 标注 (x, y) 坐标
+        for row_idx, yv in enumerate(range(max_y, min_y - 1, -1)):
+            for col_idx, xv in enumerate(range(min_x, max_x + 1)):
+                ax.text(
+                    col_idx,
+                    row_idx,
+                    f"({xv},{yv})",
+                    ha='center',
+                    va='center',
+                    fontsize=7,
+                    color='black'
+                )
+
+        # 设置坐标轴
+        ax.set_xticks(np.arange(0, width))
+        ax.set_xticklabels([str(xx) for xx in range(min_x, max_x + 1)], rotation=90)
+        ax.set_yticks(np.arange(0, height))
+        ax.set_yticklabels([str(yy) for yy in range(max_y, min_y - 1, -1)])
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+
+        plt.tight_layout()
+        plt.show(block=False)
+        plt.pause(0.8)
 
         # 计算下一时刻
         if t < time_steps - 1:
@@ -214,25 +216,6 @@ def main():
             current_probs = next_probs
 
     input("Press Enter to exit...")
-
-
-def print_probability_distribution(probabilities, start_x, start_y, range_val=5):
-    """
-    在命令行打印 (start_x, start_y) 附近 ±range_val 的概率值。
-    """
-    min_x = start_x - range_val
-    max_x = start_x + range_val
-    min_y = start_y - range_val
-    max_y = start_y + range_val
-
-    for y in range(max_y, min_y - 1, -1):
-        row_str = []
-        for x in range(min_x, max_x + 1):
-            p = probabilities.get((x, y), 0.0)
-            row_str.append(f"{p:.4f}")
-        print(" ".join(row_str))
-    print()
-
 
 if __name__ == "__main__":
     main()

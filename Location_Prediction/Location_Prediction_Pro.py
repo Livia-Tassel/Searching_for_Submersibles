@@ -139,6 +139,9 @@ def main():
         max_cell, max_val = max(current_probs.items(), key=lambda x: x[1])
         center_x, center_y = max_cell
 
+        # 打印每轮递归的最大概率
+        print(f"{t},{max_val:.8f}")
+
         # 构建当前显示区域
         data, land_mask, (min_x, max_x, min_y, max_y) = build_data_array(
             current_probs, grid_map, center_x, center_y, range_val=5
@@ -207,7 +210,7 @@ def main():
 
         plt.tight_layout()
         plt.show(block=False)
-        plt.pause(0.5)
+        plt.pause(0.001)
 
         # 计算下一时刻
         if t < time_steps - 1:

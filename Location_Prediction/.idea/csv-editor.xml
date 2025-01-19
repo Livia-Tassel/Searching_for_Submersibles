@@ -10,6 +10,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\max_probabilities.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\probabilities.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\recursive_prob_matrix.csv">
           <value>
             <Attribute>

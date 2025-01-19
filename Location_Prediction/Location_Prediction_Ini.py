@@ -72,7 +72,7 @@ def propagate_probabilities(current_prob_matrix):
     return new_prob_matrix
 
 # 递归次数
-t = 10
+t = 100
 
 current_prob_matrix = prob_matrix.copy()
 for _ in range(t):
